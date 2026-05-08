@@ -89,8 +89,8 @@ export const switchToBase = async () => {
 
 // Function to append Builder Code suffix to transaction data
 const appendBuilderCode = (data = '0x') => {
-  if (data === '0x') data = '0x00'; 
   const suffix = ENCODED_BUILDER_STRING.startsWith('0x') ? ENCODED_BUILDER_STRING.slice(2) : ENCODED_BUILDER_STRING;
+  if (data === '0x' || data === '') return `0x${suffix}`;
   return `${data}${suffix}`;
 };
 
@@ -100,13 +100,15 @@ export const dailyCheckIn = async () => {
   
   try {
     // Sending a 0 ETH transaction to self with Builder Code
-    const hash = await sendTransaction(config, {
+    const txParams = {
       account: account.address,
       to: account.address,
       value: 0n,
       data: appendBuilderCode(),
       chainId: BASE_CHAIN_ID
-    });
+    };
+    console.log('Sending Check-in Transaction with params:', txParams);
+    const hash = await sendTransaction(config, txParams);
     
     return hash;
   } catch (error) {
