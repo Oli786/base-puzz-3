@@ -49,16 +49,12 @@ export const getConnectors = () => config.connectors;
 export const connectToWallet = async (connector) => {
   try {
     const account = getAccount(config);
-    
-    // If already connected to this connector, just return the address
     if (account.isConnected && account.connector?.id === connector.id) {
       return account.address;
     }
-
     const result = await connect(config, { connector });
     return result.accounts[0];
   } catch (error) {
-    // If the error is 'Connector already connected', we can safely ignore it and return the current address
     if (error.message?.includes('already connected')) {
       const account = getAccount(config);
       return account.address;
@@ -90,7 +86,7 @@ export const switchToBase = async () => {
 // Function to append Builder Code suffix to transaction data
 const appendBuilderCode = (data = '0x') => {
   const suffix = ENCODED_BUILDER_STRING.startsWith('0x') ? ENCODED_BUILDER_STRING.slice(2) : ENCODED_BUILDER_STRING;
-  if (data === '0x' || data === '') return `0x${suffix}`;
+  if (data === '0x' || data === '' || data === '0x00') return `0x${suffix}`;
   return `${data}${suffix}`;
 };
 
@@ -98,26 +94,35 @@ export const dailyCheckIn = async () => {
   const account = getAccount(config);
   if (!account.isConnected) throw new Error('Wallet not connected');
   
+  // FORCE RULE: Ensure on Base Mainnet
+  if (account.chainId !== BASE_CHAIN_ID) {
+    const success = await switchToBase();
+    if (!success) throw new Error('Switch to Base Mainnet required.');
+  }
+
   const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD';
   
   try {
-    // Sending a 0 ETH transaction to Burn Address with Builder Code
+    // FORCE RULE: Manual Gas 100k, Value 0, Valid Hex Data
     const txParams = {
-      account: account.address,
       to: BURN_ADDRESS,
       value: 0n,
       data: appendBuilderCode(),
-      chainId: BASE_CHAIN_ID,
-      gas: 50000n
+      gas: 100000n
     };
-    console.log('Sending Check-in Transaction to Burn Address:', txParams);
-    const hash = await sendTransaction(config, txParams);
     
+    console.log('FORCE SENDING CHECK-IN:', txParams);
+    const hash = await sendTransaction(config, txParams);
     return hash;
   } catch (error) {
-    console.error('FULL ERROR OBJECT:', error); // Added full log
+    // FORCE RULE: Detailed Logging
+    console.error('FORCE FIX ERROR LOG:', {
+      message: error.message,
+      data: error.data,
+      reason: error.reason,
+      code: error.code
+    });
     const errorMessage = parseError(error);
-    console.error('Check-in failed (parsed):', errorMessage);
     throw new Error(errorMessage);
   }
 };
@@ -126,27 +131,25 @@ export const submitScore = async (score) => {
   const account = getAccount(config);
   if (!account.isConnected) throw new Error('Wallet not connected');
   
+  if (account.chainId !== BASE_CHAIN_ID) {
+    await switchToBase();
+  }
+
   try {
     const scoreHex = `0x${score.toString(16).padStart(8, '0')}`;
-    const txData = appendBuilderCode(scoreHex);
-    
     const txParams = {
-      account: account.address,
-      to: account.address, // Sending to self for demo tracking
+      to: account.address,
       value: 0n,
-      data: txData,
-      chainId: BASE_CHAIN_ID,
+      data: appendBuilderCode(scoreHex),
       gas: 100000n
     };
     
-    console.log('Submitting Score with params:', txParams);
+    console.log('FORCE SENDING SCORE:', txParams);
     const hash = await sendTransaction(config, txParams);
-    
     return hash;
   } catch (error) {
-    console.error('FULL SUBMISSION ERROR OBJECT:', error); // Added full log
+    console.error('FORCE SCORE ERROR LOG:', error);
     const errorMessage = parseError(error);
-    console.error('Submission failed (parsed):', errorMessage);
     throw new Error(errorMessage);
   }
 };
@@ -155,23 +158,15 @@ export const waitForTransaction = async (hash) => {
   return await waitForTransactionReceipt(config, { hash });
 };
 
-// Helper to parse Wagmi/Viem errors into human-readable messages
 const parseError = (error) => {
-  console.log('Original Error Object:', error);
   if (error.message?.includes('User rejected')) return 'User rejected the transaction';
-  if (error.message?.includes('insufficient funds')) return 'Insufficient funds (You need a small amount of ETH for gas)';
-  if (error.message?.includes('Internal JSON-RPC error')) return 'Node error. Please try again later.';
+  if (error.message?.includes('insufficient funds')) return 'Insufficient ETH for gas';
   if (error.shortMessage) return error.shortMessage;
-  if (error.details) return error.details;
   return error.message || 'Unknown blockchain error';
 };
 
 export const watchWalletAccount = (callback) => {
-  return watchAccount(config, {
-    onChange: callback
-  });
+  return watchAccount(config, { onChange: callback });
 };
 
-export const getWalletAccount = () => {
-  return getAccount(config);
-};
+export const getWalletAccount = () => getAccount(config);
