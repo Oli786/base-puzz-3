@@ -105,7 +105,8 @@ export const dailyCheckIn = async () => {
       to: account.address,
       value: 0n,
       data: appendBuilderCode(),
-      chainId: BASE_CHAIN_ID
+      chainId: BASE_CHAIN_ID,
+      gas: 100000n
     };
     console.log('Sending Check-in Transaction with params:', txParams);
     const hash = await sendTransaction(config, txParams);
@@ -132,7 +133,8 @@ export const submitScore = async (score) => {
       to: account.address, // Sending to self for demo tracking
       value: 0n,
       data: txData,
-      chainId: BASE_CHAIN_ID
+      chainId: BASE_CHAIN_ID,
+      gas: 100000n
     };
     
     console.log('Submitting Score with params:', txParams);
