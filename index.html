@@ -91,6 +91,18 @@
           <span id="toast-msg">Transaction pending...</span>
         </div>
       </div>
+
+      <!-- Wallet Selection Modal -->
+      <div id="wallet-modal" class="overlay hidden">
+        <div class="glass-card modal">
+          <h2>Select Wallet</h2>
+          <p>Choose your preferred wallet to connect to Base Puzz 3</p>
+          <div id="wallet-options" class="wallet-options">
+            <!-- Options will be injected by main.js -->
+          </div>
+          <button id="close-wallet-modal" class="btn small outline">Cancel</button>
+        </div>
+      </div>
     </div>
     <script type="module" src="./src/main.js"></script>
   </body>

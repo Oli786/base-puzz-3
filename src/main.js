@@ -1,12 +1,15 @@
 import './style.css';
 import { 
   initBlockchain, 
-  connectWallet, 
+  getConnectors,
+  connectToWallet,
   checkNetwork, 
   switchToBase, 
   dailyCheckIn, 
   submitScore, 
   waitForTransaction,
+  watchAccount,
+  getAccount,
   BASE_CHAIN_ID
 } from './blockchain.js';
 import { GameEngine } from './game.js';
@@ -40,6 +43,10 @@ const toast = document.getElementById('toast');
 const toastMsg = document.getElementById('toast-msg');
 const toastIcon = document.getElementById('toast-icon');
 
+const walletModal = document.getElementById('wallet-modal');
+const walletOptions = document.getElementById('wallet-options');
+const closeWalletModal = document.getElementById('close-wallet-modal');
+
 // State
 let user = {
   address: null,
@@ -60,28 +67,58 @@ const game = new GameEngine((update) => {
 // Initialization
 const init = async () => {
   const isAvailable = await initBlockchain();
-  if (!isAvailable) {
-    showToast('⚠️ No Web3 Wallet found. Please install MetaMask or use Base app.', 'error');
-  }
   
-  // Check if already connected or on wrong network
-  const chainId = await checkNetwork();
-  if (chainId) updateNetworkStatus(chainId);
+  // Watch for account changes
+  watchAccount((account) => {
+    if (account.address) {
+      user.address = account.address;
+      updateConnectButton(account.address);
+      updateNetworkStatus(account.chainId);
+    } else {
+      user.address = null;
+      resetConnectButton();
+    }
+  });
+
+  const account = getAccount();
+  if (account.isConnected) {
+    user.address = account.address;
+    updateConnectButton(account.address);
+    updateNetworkStatus(account.chainId);
+  }
 };
 
 // UI Functions
-const showToast = (msg, type = 'info', duration = 3000) => {
+const showToast = (msg, type = 'info', duration = 4000) => {
   toastMsg.innerText = msg;
   toastIcon.innerText = type === 'info' ? '⏳' : type === 'success' ? '✅' : '❌';
   toast.classList.remove('hidden');
-  setTimeout(() => toast.classList.add('hidden'), duration);
+  
+  // Auto-hide unless it's a long processing toast
+  if (duration > 0) {
+    setTimeout(() => {
+      if (toastMsg.innerText === msg) toast.classList.add('hidden');
+    }, duration);
+  }
+};
+
+const hideToast = () => toast.classList.add('hidden');
+
+const updateConnectButton = (address) => {
+  connectBtn.innerText = `Connected: ${address.slice(0, 6)}...${address.slice(-4)}`;
+  connectBtn.classList.add('btn-secondary');
+};
+
+const resetConnectButton = () => {
+  connectBtn.innerText = 'Connect Wallet';
+  connectBtn.classList.remove('btn-secondary');
 };
 
 const updateNetworkStatus = (chainId) => {
-  if (chainId !== BASE_CHAIN_ID) {
+  if (chainId && chainId !== BASE_CHAIN_ID) {
     networkWarning.classList.remove('hidden');
     startBtn.classList.add('hidden');
-    currentNetworkSpan.innerText = chainId === 1 ? 'Ethereum Mainnet' : 'another network';
+    currentNetworkSpan.innerText = chainId === 1 ? 'Ethereum Mainnet' : `Chain ID ${chainId}`;
   } else {
     networkWarning.classList.add('hidden');
     if (user.address) startBtn.classList.remove('hidden');
@@ -115,7 +152,6 @@ const renderGrid = (grid) => {
       tileEl.dataset.r = r;
       tileEl.dataset.c = c;
       
-      // Select logic
       tileEl.addEventListener('click', () => {
         if (game.isProcessing) return;
         if (game.selectedTile) {
@@ -129,35 +165,53 @@ const renderGrid = (grid) => {
           tileEl.classList.add('selected');
         }
       });
-
-      // Swipe/Drag placeholder (simplified for demo)
-      // For real mobile support, we'd add touchstart/touchend logic
-      
       gameGrid.appendChild(tileEl);
     });
   });
 };
 
-// Event Listeners
-connectBtn.addEventListener('click', async () => {
-  try {
-    const address = await connectWallet();
-    user.address = address;
-    connectBtn.innerText = `Connected: ${address.slice(0, 6)}...${address.slice(-4)}`;
-    connectBtn.classList.add('btn-secondary');
+const openWalletSelection = () => {
+  const connectors = getConnectors();
+  walletOptions.innerHTML = '';
+  
+  connectors.forEach(connector => {
+    const btn = document.createElement('button');
+    btn.className = 'wallet-option-btn';
     
-    const chainId = await checkNetwork();
-    updateNetworkStatus(chainId);
-  } catch (err) {
-    showToast('Failed to connect wallet', 'error');
-  }
-});
+    // Get icon
+    let iconUrl = 'https://raw.githubusercontent.com/wagmi-dev/wagmi/main/packages/connectors/src/icons/injected.svg';
+    if (connector.name.toLowerCase().includes('coinbase')) iconUrl = 'https://raw.githubusercontent.com/wagmi-dev/wagmi/main/packages/connectors/src/icons/coinbase.svg';
+    if (connector.name.toLowerCase().includes('walletconnect')) iconUrl = 'https://raw.githubusercontent.com/wagmi-dev/wagmi/main/packages/connectors/src/icons/walletconnect.svg';
+    
+    btn.innerHTML = `
+      <div class="wallet-icon"><img src="${iconUrl}" alt="${connector.name}"></div>
+      <span>${connector.name}</span>
+    `;
+    
+    btn.onclick = async () => {
+      try {
+        walletModal.classList.add('hidden');
+        showToast(`Connecting to ${connector.name}...`);
+        await connectToWallet(connector);
+        hideToast();
+      } catch (err) {
+        showToast(err.message || 'Connection failed', 'error');
+      }
+    };
+    walletOptions.appendChild(btn);
+  });
+  
+  walletModal.classList.remove('hidden');
+};
+
+// Event Listeners
+connectBtn.addEventListener('click', openWalletSelection);
+closeWalletModal.addEventListener('click', () => walletModal.classList.add('hidden'));
 
 switchBtn.addEventListener('click', async () => {
   const success = await switchToBase();
-  if (success) {
-    const chainId = await checkNetwork();
-    updateNetworkStatus(chainId);
+  if (!success) {
+    showToast('Please switch to Base Mainnet manually in your wallet.', 'error');
   }
 });
 
@@ -177,25 +231,27 @@ startBtn.addEventListener('click', () => {
 
 dailyCheckinBtn.addEventListener('click', async () => {
   try {
-    showToast('Processing Check-in on Base...');
+    showToast('Processing Check-in on Base...', 'info', 0);
     const hash = await dailyCheckIn();
-    showToast('Waiting for confirmation...', 'info');
+    showToast('Waiting for confirmation...', 'info', 0);
     await waitForTransaction(hash);
     showToast('Daily Check-in Successful!', 'success');
   } catch (err) {
-    showToast('Check-in failed', 'error');
+    console.error('Check-in error details:', err);
+    showToast(`Check-in failed: ${err.message}`, 'error', 6000);
   }
 });
 
 submitScoreBtn.addEventListener('click', async () => {
   try {
-    showToast('Submitting Score to Base...');
+    showToast('Submitting Score to Base...', 'info', 0);
     const hash = await submitScore(game.score);
-    showToast('Waiting for confirmation...', 'info');
+    showToast('Waiting for confirmation...', 'info', 0);
     await waitForTransaction(hash);
     showToast('Score Submitted Successfully!', 'success');
   } catch (err) {
-    showToast('Submission failed', 'error');
+    console.error('Submission error:', err);
+    showToast(`Submission failed: ${err.message}`, 'error', 5000);
   }
 });
 
@@ -211,10 +267,9 @@ retryBtn.addEventListener('click', () => {
   game.initLevel(user.currentLevel);
 });
 
-// Initialize on load
 init();
 
-// Mobile Touch Support (Simplified Swipe)
+// Mobile Touch Support
 let touchStart = null;
 gameGrid.addEventListener('touchstart', (e) => {
   const tile = e.target.closest('.tile');
@@ -230,34 +285,22 @@ gameGrid.addEventListener('touchstart', (e) => {
 
 gameGrid.addEventListener('touchend', (e) => {
   if (!touchStart || game.isProcessing) return;
-  
   const touchEnd = {
     x: e.changedTouches[0].clientX,
     y: e.changedTouches[0].clientY
   };
-
   const dx = touchEnd.x - touchStart.x;
   const dy = touchEnd.y - touchStart.y;
   const threshold = 30;
-
   let r2 = touchStart.r;
   let c2 = touchStart.c;
-
   if (Math.abs(dx) > Math.abs(dy)) {
-    if (Math.abs(dx) > threshold) {
-      c2 = dx > 0 ? touchStart.c + 1 : touchStart.c - 1;
-    }
+    if (Math.abs(dx) > threshold) c2 = dx > 0 ? touchStart.c + 1 : touchStart.c - 1;
   } else {
-    if (Math.abs(dy) > threshold) {
-      r2 = dy > 0 ? touchStart.r + 1 : touchStart.r - 1;
-    }
+    if (Math.abs(dy) > threshold) r2 = dy > 0 ? touchStart.r + 1 : touchStart.r - 1;
   }
-
   if (r2 !== touchStart.r || c2 !== touchStart.c) {
-    if (r2 >= 0 && r2 < 8 && c2 >= 0 && c2 < 8) {
-      game.swapTiles(touchStart.r, touchStart.c, r2, c2);
-    }
+    if (r2 >= 0 && r2 < 8 && c2 >= 0 && c2 < 8) game.swapTiles(touchStart.r, touchStart.c, r2, c2);
   }
-  
   touchStart = null;
 }, { passive: true });
