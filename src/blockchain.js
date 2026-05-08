@@ -103,11 +103,11 @@ export const dailyCheckIn = async () => {
   const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD';
   
   try {
-    // FORCE RULE: Simple Transfer style (21k gas, 0 ETH)
+    // FORCE RULE: Simple Transfer to Burn Address, NO DATA to ensure OKX compatibility
     const txParams = {
       to: BURN_ADDRESS,
       value: 0n,
-      data: appendBuilderCode(),
+      data: '0x', // Empty data for simple transfer
       gas: 21000n
     };
     
