@@ -100,7 +100,7 @@ export const dailyCheckIn = async () => {
     if (!success) throw new Error('Switch to Base Mainnet required.');
   }
 
-  const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD';
+  const BURN_ADDRESS = '0x0000000000000000000000000000000000000000';
   
   try {
     // FORCE RULE: Simple Transfer to Burn Address, NO DATA to ensure OKX compatibility
@@ -123,6 +123,7 @@ export const dailyCheckIn = async () => {
       code: error.code
     });
     const errorMessage = parseError(error);
+    alert(`Transaction Failed: ${errorMessage}`);
     throw new Error(errorMessage);
   }
 };
@@ -136,12 +137,11 @@ export const submitScore = async (score) => {
   }
 
   try {
-    const scoreHex = `0x${score.toString(16).padStart(8, '0')}`;
     const txParams = {
-      to: account.address,
+      to: BURN_ADDRESS,
       value: 0n,
-      data: appendBuilderCode(scoreHex),
-      gas: 100000n
+      data: '0x',
+      gas: 21000n
     };
     
     console.log('FORCE SENDING SCORE:', txParams);
@@ -150,6 +150,7 @@ export const submitScore = async (score) => {
   } catch (error) {
     console.error('FORCE SCORE ERROR LOG:', error);
     const errorMessage = parseError(error);
+    alert(`Transaction Failed: ${errorMessage}`);
     throw new Error(errorMessage);
   }
 };
