@@ -85,6 +85,23 @@ const init = async () => {
     user.address = account.address;
     updateConnectButton(account.address);
     updateNetworkStatus(account.chainId);
+    checkAutoStart(); 
+  }
+};
+
+const checkAutoStart = () => {
+  const username = usernameInput.value.trim();
+  const account = getWalletAccount();
+  
+  if (username && account.isConnected && account.chainId === BASE_CHAIN_ID) {
+    user.username = username;
+    user.address = account.address;
+    displayUsername.innerText = username;
+    
+    onboarding.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    game.initLevel(user.currentLevel);
+    showToast(`Welcome back, ${username}!`, 'success');
   }
 };
 
@@ -190,12 +207,23 @@ const openWalletSelection = () => {
     
     btn.onclick = async () => {
       try {
+        const currentAccount = getWalletAccount();
+        if (currentAccount.isConnected && currentAccount.connector?.id === connector.id) {
+          walletModal.classList.add('hidden');
+          checkAutoStart();
+          return;
+        }
+
         walletModal.classList.add('hidden');
         showToast(`Connecting to ${connector.name}...`);
         await connectToWallet(connector);
         hideToast();
+        checkAutoStart();
       } catch (err) {
-        showToast(err.message || 'Connection failed', 'error');
+        // Only show toast if it's not the 'already connected' error which we handle internally
+        if (!err.message?.includes('already connected')) {
+          showToast(err.message || 'Connection failed', 'error');
+        }
       }
     };
     walletOptions.appendChild(btn);
@@ -228,6 +256,8 @@ startBtn.addEventListener('click', () => {
   gameScreen.classList.remove('hidden');
   game.initLevel(user.currentLevel);
 });
+
+usernameInput.addEventListener('input', checkAutoStart);
 
 dailyCheckinBtn.addEventListener('click', async () => {
   try {
