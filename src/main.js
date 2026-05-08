@@ -13,6 +13,7 @@ import {
   BASE_CHAIN_ID
 } from './blockchain.js';
 import { GameEngine } from './game.js';
+import { FRUIT_ICONS } from './assets/fruits.js';
 
 // DOM Elements
 const onboarding = document.getElementById('onboarding');
@@ -180,6 +181,9 @@ const renderGrid = (grid) => {
       tileEl.className = `tile tile-${tile.type} ${tile.clearing ? 'clearing' : ''} ${tile.isNew ? 'new' : ''}`;
       tileEl.dataset.r = r;
       tileEl.dataset.c = c;
+      
+      // Inject SVG icon
+      tileEl.innerHTML = FRUIT_ICONS[tile.type] || '';
       
       // Click selection
       tileEl.addEventListener('click', (e) => {

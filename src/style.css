@@ -292,12 +292,22 @@ input:focus {
 }
 
 /* Tile Colors */
-.tile-red { background: radial-gradient(circle at 30% 30%, #ff5f6d, #ffc371); }
-.tile-blue { background: radial-gradient(circle at 30% 30%, #2193b0, #6dd5ed); }
-.tile-green { background: radial-gradient(circle at 30% 30%, #11998e, #38ef7d); }
-.tile-yellow { background: radial-gradient(circle at 30% 30%, #f7971e, #ffd200); }
-.tile-purple { background: radial-gradient(circle at 30% 30%, #8e2de2, #4a00e0); }
-.tile-pink { background: radial-gradient(circle at 30% 30%, #ec008c, #fc6767); }
+.tile svg {
+  width: 75%;
+  height: 75%;
+  transition: transform 0.2s ease;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+}
+
+.tile:hover svg {
+  transform: scale(1.15) rotate(5deg);
+}
+
+.tile.selected {
+  background: rgba(255, 255, 255, 0.1);
+  outline: 2px solid var(--primary-color);
+  z-index: 2;
+}
 
 /* Animations */
 @keyframes pop {

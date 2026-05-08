@@ -1,6 +1,6 @@
 // Game Configuration
 export const GRID_SIZE = 8;
-export const TILE_TYPES = ['red', 'blue', 'green', 'yellow', 'purple', 'pink'];
+export const TILE_TYPES = ['apple', 'pineapple', 'watermelon', 'banana', 'mango', 'orange'];
 export const LEVELS = Array.from({ length: 30 }, (_, i) => ({
   level: i + 1,
   targetScore: 500 + i * 250,
