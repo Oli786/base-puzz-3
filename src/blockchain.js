@@ -100,13 +100,12 @@ export const dailyCheckIn = async () => {
   
   try {
     // Sending a 0 ETH transaction to self with Builder Code
-    // Explicitly setting a gas limit to avoid estimation issues on some wallets
     const hash = await sendTransaction(config, {
+      account: account.address,
       to: account.address,
       value: 0n,
       data: appendBuilderCode(),
-      chainId: BASE_CHAIN_ID,
-      gas: 25000n // Standard transfer gas + buffer for data
+      chainId: BASE_CHAIN_ID
     });
     
     return hash;
@@ -126,6 +125,7 @@ export const submitScore = async (score) => {
     const txData = appendBuilderCode(scoreHex);
     
     const hash = await sendTransaction(config, {
+      account: account.address,
       to: account.address, // Sending to self for demo tracking
       value: 0n,
       data: txData,
