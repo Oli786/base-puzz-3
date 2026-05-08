@@ -8,8 +8,8 @@ import {
   dailyCheckIn, 
   submitScore, 
   waitForTransaction,
-  watchAccount,
-  getAccount,
+  watchWalletAccount,
+  getWalletAccount,
   BASE_CHAIN_ID
 } from './blockchain.js';
 import { GameEngine } from './game.js';
@@ -69,7 +69,7 @@ const init = async () => {
   const isAvailable = await initBlockchain();
   
   // Watch for account changes
-  watchAccount((account) => {
+  watchWalletAccount((account) => {
     if (account.address) {
       user.address = account.address;
       updateConnectButton(account.address);
@@ -80,7 +80,7 @@ const init = async () => {
     }
   });
 
-  const account = getAccount();
+  const account = getWalletAccount();
   if (account.isConnected) {
     user.address = account.address;
     updateConnectButton(account.address);

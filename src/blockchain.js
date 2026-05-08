@@ -48,9 +48,21 @@ export const getConnectors = () => config.connectors;
 
 export const connectToWallet = async (connector) => {
   try {
+    const account = getAccount(config);
+    
+    // If already connected to this connector, just return the address
+    if (account.isConnected && account.connector?.id === connector.id) {
+      return account.address;
+    }
+
     const result = await connect(config, { connector });
     return result.accounts[0];
   } catch (error) {
+    // If the error is 'Connector already connected', we can safely ignore it and return the current address
+    if (error.message?.includes('already connected')) {
+      const account = getAccount(config);
+      return account.address;
+    }
     console.error('Wallet connection failed:', error);
     throw error;
   }
@@ -143,4 +155,12 @@ const parseError = (error) => {
   return error.message || 'Unknown blockchain error';
 };
 
-export { watchAccount, getAccount };
+export const watchWalletAccount = (callback) => {
+  return watchAccount(config, {
+    onChange: callback
+  });
+};
+
+export const getWalletAccount = () => {
+  return getAccount(config);
+};
