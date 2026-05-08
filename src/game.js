@@ -55,16 +55,23 @@ export class GameEngine {
   }
 
   async swapTiles(r1, c1, r2, c2) {
-    if (this.isProcessing || this.moves <= 0) return;
+    if (this.isProcessing || this.moves <= 0) {
+      console.log('Swap ignored: Game is processing or no moves left.');
+      return;
+    }
     
     // Check if adjacent
-    if (Math.abs(r1 - r2) + Math.abs(c1 - c2) !== 1) return;
+    if (Math.abs(r1 - r2) + Math.abs(c1 - c2) !== 1) {
+      console.log(`Swap ignored: Tiles (${r1},${c1}) and (${r2},${c2}) are not adjacent.`);
+      return;
+    }
 
+    console.log(`Attempting swap: (${r1},${c1}) with (${r2},${c2})`);
     this.isProcessing = true;
     this.moves--;
 
-    const tile1 = this.grid[r1][c1];
-    const tile2 = this.grid[r2][c2];
+    const tile1 = { ...this.grid[r1][c1] };
+    const tile2 = { ...this.grid[r2][c2] };
 
     // Swap in grid
     this.grid[r1][c1] = { ...tile2, r: r1, c: c1 };
@@ -72,17 +79,19 @@ export class GameEngine {
 
     this.onUpdate({ grid: this.grid, moves: this.moves });
 
+    // Wait for swap animation (if any)
+    await new Promise(r => setTimeout(r, 200));
+
     const matches = this.findMatches();
     if (matches.length > 0) {
+      console.log(`Match found! Clearing ${matches.length} tiles.`);
       await this.processMatches();
     } else {
+      console.log('No match found. Swapping back.');
       // Swap back if no match
-      await new Promise(r => setTimeout(r, 300));
       this.grid[r1][c1] = tile1;
       this.grid[r2][c2] = tile2;
-      this.moves++; // Refund move if no match? Some games do this, some don't. 
-      // The prompt says "matching three or more tiles clears them and gives points".
-      // I'll refund the move to make it "easy/lightweight" as requested.
+      this.moves++; // Refund move
       this.onUpdate({ grid: this.grid, moves: this.moves });
     }
 

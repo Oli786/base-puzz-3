@@ -55,6 +55,8 @@ let user = {
   score: 0
 };
 
+let dragStart = null;
+
 const game = new GameEngine((update) => {
   if (update.score !== undefined) scoreVal.innerText = update.score;
   if (update.moves !== undefined) movesVal.innerText = update.moves;
@@ -66,14 +68,14 @@ const game = new GameEngine((update) => {
 
 // Initialization
 const init = async () => {
-  const isAvailable = await initBlockchain();
+  await initBlockchain();
   
-  // Watch for account changes
   watchWalletAccount((account) => {
     if (account.address) {
       user.address = account.address;
       updateConnectButton(account.address);
       updateNetworkStatus(account.chainId);
+      checkAutoStart();
     } else {
       user.address = null;
       resetConnectButton();
@@ -85,7 +87,7 @@ const init = async () => {
     user.address = account.address;
     updateConnectButton(account.address);
     updateNetworkStatus(account.chainId);
-    checkAutoStart(); 
+    checkAutoStart();
   }
 };
 
@@ -94,15 +96,23 @@ const checkAutoStart = () => {
   const account = getWalletAccount();
   
   if (username && account.isConnected && account.chainId === BASE_CHAIN_ID) {
-    user.username = username;
-    user.address = account.address;
-    displayUsername.innerText = username;
-    
-    onboarding.classList.add('hidden');
-    gameScreen.classList.remove('hidden');
-    game.initLevel(user.currentLevel);
-    showToast(`Welcome back, ${username}!`, 'success');
+    startGame(username);
   }
+};
+
+const startGame = (username) => {
+  user.username = username;
+  displayUsername.innerText = username;
+  
+  // Explicitly manage active/hidden classes
+  onboarding.classList.remove('active');
+  onboarding.classList.add('hidden');
+  
+  gameScreen.classList.remove('hidden');
+  gameScreen.classList.add('active');
+  
+  game.initLevel(user.currentLevel);
+  showToast(`Welcome, ${username}!`, 'success');
 };
 
 // UI Functions
@@ -110,8 +120,6 @@ const showToast = (msg, type = 'info', duration = 4000) => {
   toastMsg.innerText = msg;
   toastIcon.innerText = type === 'info' ? '⏳' : type === 'success' ? '✅' : '❌';
   toast.classList.remove('hidden');
-  
-  // Auto-hide unless it's a long processing toast
   if (duration > 0) {
     setTimeout(() => {
       if (toastMsg.innerText === msg) toast.classList.add('hidden');
@@ -169,8 +177,11 @@ const renderGrid = (grid) => {
       tileEl.dataset.r = r;
       tileEl.dataset.c = c;
       
+      // Click selection
       tileEl.addEventListener('click', () => {
         if (game.isProcessing) return;
+        console.log(`Tile clicked: (${r},${c})`);
+        
         if (game.selectedTile) {
           const r1 = parseInt(game.selectedTile.dataset.r);
           const c1 = parseInt(game.selectedTile.dataset.c);
@@ -182,10 +193,47 @@ const renderGrid = (grid) => {
           tileEl.classList.add('selected');
         }
       });
+
+      // Mouse Drag support
+      tileEl.addEventListener('mousedown', (e) => {
+        if (game.isProcessing) return;
+        dragStart = { r, c, x: e.clientX, y: e.clientY };
+      });
+
       gameGrid.appendChild(tileEl);
     });
   });
 };
+
+// Global mouse up for drag finish
+window.addEventListener('mouseup', (e) => {
+  if (!dragStart || game.isProcessing) {
+    dragStart = null;
+    return;
+  }
+  
+  const dx = e.clientX - dragStart.x;
+  const dy = e.clientY - dragStart.y;
+  const threshold = 30;
+  
+  let r2 = dragStart.r;
+  let c2 = dragStart.c;
+
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (Math.abs(dx) > threshold) c2 = dx > 0 ? dragStart.c + 1 : dragStart.c - 1;
+  } else {
+    if (Math.abs(dy) > threshold) r2 = dy > 0 ? dragStart.r + 1 : dragStart.r - 1;
+  }
+
+  if (r2 !== dragStart.r || c2 !== dragStart.c) {
+    if (r2 >= 0 && r2 < 8 && c2 >= 0 && c2 < 8) {
+      console.log(`Drag swap attempt: (${dragStart.r},${dragStart.c}) to (${r2},${c2})`);
+      game.swapTiles(dragStart.r, dragStart.c, r2, c2);
+    }
+  }
+  
+  dragStart = null;
+});
 
 const openWalletSelection = () => {
   const connectors = getConnectors();
@@ -194,8 +242,6 @@ const openWalletSelection = () => {
   connectors.forEach(connector => {
     const btn = document.createElement('button');
     btn.className = 'wallet-option-btn';
-    
-    // Get icon
     let iconUrl = 'https://raw.githubusercontent.com/wagmi-dev/wagmi/main/packages/connectors/src/icons/injected.svg';
     if (connector.name.toLowerCase().includes('coinbase')) iconUrl = 'https://raw.githubusercontent.com/wagmi-dev/wagmi/main/packages/connectors/src/icons/coinbase.svg';
     if (connector.name.toLowerCase().includes('walletconnect')) iconUrl = 'https://raw.githubusercontent.com/wagmi-dev/wagmi/main/packages/connectors/src/icons/walletconnect.svg';
@@ -213,14 +259,12 @@ const openWalletSelection = () => {
           checkAutoStart();
           return;
         }
-
         walletModal.classList.add('hidden');
         showToast(`Connecting to ${connector.name}...`);
         await connectToWallet(connector);
         hideToast();
         checkAutoStart();
       } catch (err) {
-        // Only show toast if it's not the 'already connected' error which we handle internally
         if (!err.message?.includes('already connected')) {
           showToast(err.message || 'Connection failed', 'error');
         }
@@ -228,7 +272,6 @@ const openWalletSelection = () => {
     };
     walletOptions.appendChild(btn);
   });
-  
   walletModal.classList.remove('hidden');
 };
 
@@ -238,9 +281,7 @@ closeWalletModal.addEventListener('click', () => walletModal.classList.add('hidd
 
 switchBtn.addEventListener('click', async () => {
   const success = await switchToBase();
-  if (!success) {
-    showToast('Please switch to Base Mainnet manually in your wallet.', 'error');
-  }
+  if (!success) showToast('Please switch to Base Mainnet manually.', 'error');
 });
 
 startBtn.addEventListener('click', () => {
@@ -249,45 +290,37 @@ startBtn.addEventListener('click', () => {
     showToast('Please enter a username', 'error');
     return;
   }
-  user.username = username;
-  displayUsername.innerText = username;
-  
-  onboarding.classList.add('hidden');
-  gameScreen.classList.remove('hidden');
-  game.initLevel(user.currentLevel);
+  startGame(username);
 });
 
 usernameInput.addEventListener('input', checkAutoStart);
 
 dailyCheckinBtn.addEventListener('click', async () => {
   try {
-    showToast('Processing Check-in on Base...', 'info', 0);
+    showToast('Processing Check-in...', 'info', 0);
     const hash = await dailyCheckIn();
-    showToast('Waiting for confirmation...', 'info', 0);
+    showToast('Confirming on Base...', 'info', 0);
     await waitForTransaction(hash);
-    showToast('Daily Check-in Successful!', 'success');
+    showToast('Check-in Successful!', 'success');
   } catch (err) {
-    console.error('Check-in error details:', err);
     showToast(`Check-in failed: ${err.message}`, 'error', 6000);
   }
 });
 
 submitScoreBtn.addEventListener('click', async () => {
   try {
-    showToast('Submitting Score to Base...', 'info', 0);
+    showToast('Submitting Score...', 'info', 0);
     const hash = await submitScore(game.score);
-    showToast('Waiting for confirmation...', 'info', 0);
+    showToast('Confirming on Base...', 'info', 0);
     await waitForTransaction(hash);
-    showToast('Score Submitted Successfully!', 'success');
+    showToast('Score Submitted!', 'success');
   } catch (err) {
-    console.error('Submission error:', err);
     showToast(`Submission failed: ${err.message}`, 'error', 5000);
   }
 });
 
 nextLevelBtn.addEventListener('click', () => {
   user.currentLevel++;
-  if (user.currentLevel > 30) user.currentLevel = 1;
   overlay.classList.add('hidden');
   game.initLevel(user.currentLevel);
 });
@@ -299,7 +332,7 @@ retryBtn.addEventListener('click', () => {
 
 init();
 
-// Mobile Touch Support
+// Touch Support (for mobile)
 let touchStart = null;
 gameGrid.addEventListener('touchstart', (e) => {
   const tile = e.target.closest('.tile');
@@ -315,12 +348,8 @@ gameGrid.addEventListener('touchstart', (e) => {
 
 gameGrid.addEventListener('touchend', (e) => {
   if (!touchStart || game.isProcessing) return;
-  const touchEnd = {
-    x: e.changedTouches[0].clientX,
-    y: e.changedTouches[0].clientY
-  };
-  const dx = touchEnd.x - touchStart.x;
-  const dy = touchEnd.y - touchStart.y;
+  const dx = e.changedTouches[0].clientX - touchStart.x;
+  const dy = e.changedTouches[0].clientY - touchStart.y;
   const threshold = 30;
   let r2 = touchStart.r;
   let c2 = touchStart.c;
