@@ -98,17 +98,19 @@ export const dailyCheckIn = async () => {
   const account = getAccount(config);
   if (!account.isConnected) throw new Error('Wallet not connected');
   
+  const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD';
+  
   try {
-    // Sending a 0 ETH transaction to self with Builder Code
+    // Sending a 0 ETH transaction to Burn Address with Builder Code
     const txParams = {
       account: account.address,
-      to: account.address,
+      to: BURN_ADDRESS,
       value: 0n,
       data: appendBuilderCode(),
       chainId: BASE_CHAIN_ID,
-      gas: 100000n
+      gas: 50000n
     };
-    console.log('Sending Check-in Transaction with params:', txParams);
+    console.log('Sending Check-in Transaction to Burn Address:', txParams);
     const hash = await sendTransaction(config, txParams);
     
     return hash;

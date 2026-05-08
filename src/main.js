@@ -65,6 +65,7 @@ const game = new GameEngine((update) => {
   if (update.target !== undefined) targetVal.innerText = update.target;
   if (update.grid !== undefined) renderGrid(update.grid);
   if (update.status) handleGameStatus(update.status);
+  updateDailyCheckinButton();
 });
 
 // Initialization
@@ -78,6 +79,7 @@ const init = async () => {
       user.address = account.address;
       updateConnectButton(account.address);
       updateNetworkStatus(account.chainId);
+      updateDailyCheckinButton();
       checkAutoStart();
     } else {
       user.address = null;
@@ -91,6 +93,7 @@ const init = async () => {
     user.address = account.address;
     updateConnectButton(account.address);
     updateNetworkStatus(account.chainId);
+    updateDailyCheckinButton();
     checkAutoStart();
   }
 };
@@ -317,6 +320,7 @@ startBtn.addEventListener('click', () => {
 usernameInput.addEventListener('input', checkAutoStart);
 
 dailyCheckinBtn.addEventListener('click', async () => {
+  if (dailyCheckinBtn.disabled) return;
   console.log('Daily Check-in Clicked');
   try {
     showToast('Processing Check-in...', 'info', 0);
@@ -324,12 +328,39 @@ dailyCheckinBtn.addEventListener('click', async () => {
     console.log('Check-in transaction sent:', hash);
     showToast('Confirming on Base...', 'info', 0);
     await waitForTransaction(hash);
-    showToast('Check-in Successful!', 'success');
+    
+    // Success Logic
+    const nextCheckin = Date.now() + (24 * 60 * 60 * 1000);
+    localStorage.setItem(`last_checkin_${user.address}`, nextCheckin);
+    updateDailyCheckinButton();
+    
+    showToast('Check-in Successful! Resetting in 24h.', 'success');
   } catch (err) {
     console.error('Check-in Clicked - Error:', err);
     showToast(`Check-in failed: ${err.message}`, 'error', 6000);
   }
 });
+
+const updateDailyCheckinButton = () => {
+  const account = getWalletAccount();
+  if (!account.address) return;
+  
+  const nextCheckin = localStorage.getItem(`last_checkin_${account.address}`);
+  if (nextCheckin) {
+    const timeLeft = parseInt(nextCheckin) - Date.now();
+    if (timeLeft > 0) {
+      const hours = Math.floor(timeLeft / (60 * 60 * 1000));
+      dailyCheckinBtn.innerText = `✅ Checked-in (${hours}h left)`;
+      dailyCheckinBtn.disabled = true;
+      dailyCheckinBtn.classList.add('btn-disabled');
+      return;
+    }
+  }
+  
+  dailyCheckinBtn.innerText = '✨ Daily Check-in';
+  dailyCheckinBtn.disabled = false;
+  dailyCheckinBtn.classList.remove('btn-disabled');
+};
 
 submitScoreBtn.addEventListener('click', async () => {
   console.log('Submit Score Clicked');

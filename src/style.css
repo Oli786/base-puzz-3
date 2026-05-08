@@ -468,3 +468,13 @@ input:focus {
   background: rgba(255, 255, 255, 0.05);
   color: white;
 }
+ 
+ / *   D i s a b l e d   C h e c k - i n   B u t t o n   * /  
+ # d a i l y - c h e c k i n . b t n - d i s a b l e d   {  
+     b a c k g r o u n d :   r g b a ( 2 5 5 ,   2 5 5 ,   2 5 5 ,   0 . 1 )   ! i m p o r t a n t ;  
+     c o l o r :   r g b a ( 2 5 5 ,   2 5 5 ,   2 5 5 ,   0 . 4 )   ! i m p o r t a n t ;  
+     c u r s o r :   n o t - a l l o w e d ;  
+     b o x - s h a d o w :   n o n e ;  
+     f i l t e r :   g r a y s c a l e ( 1 ) ;  
+ }  
+ 
