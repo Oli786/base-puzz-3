@@ -323,8 +323,8 @@ dailyCheckinBtn.addEventListener('click', async () => {
   if (dailyCheckinBtn.disabled) return;
   console.log('Daily Check-in Clicked');
   try {
-    const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD';
-    showToast(`Sending to ${BURN_ADDRESS.slice(0, 8)}...`, 'info', 0);
+    const BURN_ADDRESS = '0x0000000000000000000000000000000000000000';
+    showToast(`Sending to ${BURN_ADDRESS.slice(0, 10)}...`, 'info', 0);
     const hash = await dailyCheckIn();
     console.log('Check-in transaction sent:', hash);
     showToast('Confirming on Base...', 'info', 0);
