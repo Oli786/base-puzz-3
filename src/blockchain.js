@@ -112,8 +112,9 @@ export const dailyCheckIn = async () => {
     
     return hash;
   } catch (error) {
+    console.error('FULL ERROR OBJECT:', error); // Added full log
     const errorMessage = parseError(error);
-    console.error('Check-in failed:', errorMessage);
+    console.error('Check-in failed (parsed):', errorMessage);
     throw new Error(errorMessage);
   }
 };
@@ -126,18 +127,22 @@ export const submitScore = async (score) => {
     const scoreHex = `0x${score.toString(16).padStart(8, '0')}`;
     const txData = appendBuilderCode(scoreHex);
     
-    const hash = await sendTransaction(config, {
+    const txParams = {
       account: account.address,
       to: account.address, // Sending to self for demo tracking
       value: 0n,
       data: txData,
       chainId: BASE_CHAIN_ID
-    });
+    };
+    
+    console.log('Submitting Score with params:', txParams);
+    const hash = await sendTransaction(config, txParams);
     
     return hash;
   } catch (error) {
+    console.error('FULL SUBMISSION ERROR OBJECT:', error); // Added full log
     const errorMessage = parseError(error);
-    console.error('Score submission failed:', errorMessage);
+    console.error('Submission failed (parsed):', errorMessage);
     throw new Error(errorMessage);
   }
 };
