@@ -103,12 +103,12 @@ export const dailyCheckIn = async () => {
   const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD';
   
   try {
-    // FORCE RULE: Manual Gas 100k, Value 0, Valid Hex Data
+    // FORCE RULE: Manual Gas 30k, Value 1 wei (to avoid simulation errors on OKX), Valid Hex Data
     const txParams = {
       to: BURN_ADDRESS,
-      value: 0n,
+      value: 1n, // 1 wei
       data: appendBuilderCode(),
-      gas: 100000n
+      gas: 30000n
     };
     
     console.log('FORCE SENDING CHECK-IN:', txParams);
