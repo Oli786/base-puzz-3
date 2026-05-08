@@ -55,7 +55,7 @@ body {
 }
 
 .screen.hidden {
-  display: none;
+  display: none !important;
   opacity: 0;
   transform: translateY(10px);
 }
@@ -195,6 +195,20 @@ input:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+#daily-checkin {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  border: none;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.85rem;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
 }
 
 #display-username {
