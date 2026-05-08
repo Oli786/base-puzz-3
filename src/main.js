@@ -68,9 +68,11 @@ const game = new GameEngine((update) => {
 
 // Initialization
 const init = async () => {
+  console.log('Initializing Application...');
   await initBlockchain();
   
   watchWalletAccount((account) => {
+    console.log('Account status changed:', account.status, account.address);
     if (account.address) {
       user.address = account.address;
       updateConnectButton(account.address);
@@ -84,6 +86,7 @@ const init = async () => {
 
   const account = getWalletAccount();
   if (account.isConnected) {
+    console.log('Wallet already connected:', account.address);
     user.address = account.address;
     updateConnectButton(account.address);
     updateNetworkStatus(account.chainId);
@@ -96,15 +99,16 @@ const checkAutoStart = () => {
   const account = getWalletAccount();
   
   if (username && account.isConnected && account.chainId === BASE_CHAIN_ID) {
+    console.log('Auto-starting game...');
     startGame(username);
   }
 };
 
 const startGame = (username) => {
+  console.log('Starting Game for:', username);
   user.username = username;
   displayUsername.innerText = username;
   
-  // Explicitly manage active/hidden classes
   onboarding.classList.remove('active');
   onboarding.classList.add('hidden');
   
@@ -178,13 +182,21 @@ const renderGrid = (grid) => {
       tileEl.dataset.c = c;
       
       // Click selection
-      tileEl.addEventListener('click', () => {
+      tileEl.addEventListener('click', (e) => {
         if (game.isProcessing) return;
-        console.log(`Tile clicked: (${r},${c})`);
+        console.log(`Tile Clicked: (${r},${c})`, tile);
         
         if (game.selectedTile) {
           const r1 = parseInt(game.selectedTile.dataset.r);
           const c1 = parseInt(game.selectedTile.dataset.c);
+          
+          if (r1 === r && c1 === c) {
+            // Deselect if clicking the same tile
+            game.selectedTile.classList.remove('selected');
+            game.selectedTile = null;
+            return;
+          }
+          
           game.swapTiles(r1, c1, r, c);
           game.selectedTile.classList.remove('selected');
           game.selectedTile = null;
@@ -197,6 +209,7 @@ const renderGrid = (grid) => {
       // Mouse Drag support
       tileEl.addEventListener('mousedown', (e) => {
         if (game.isProcessing) return;
+        console.log(`Drag started at: (${r},${c})`);
         dragStart = { r, c, x: e.clientX, y: e.clientY };
       });
 
@@ -207,14 +220,17 @@ const renderGrid = (grid) => {
 
 // Global mouse up for drag finish
 window.addEventListener('mouseup', (e) => {
-  if (!dragStart || game.isProcessing) {
+  if (!dragStart) return;
+  
+  if (game.isProcessing) {
+    console.log('Drag swap ignored: Game is processing.');
     dragStart = null;
     return;
   }
   
   const dx = e.clientX - dragStart.x;
   const dy = e.clientY - dragStart.y;
-  const threshold = 30;
+  const threshold = 20; // Lower threshold for sensitivity
   
   let r2 = dragStart.r;
   let c2 = dragStart.c;
@@ -227,7 +243,7 @@ window.addEventListener('mouseup', (e) => {
 
   if (r2 !== dragStart.r || c2 !== dragStart.c) {
     if (r2 >= 0 && r2 < 8 && c2 >= 0 && c2 < 8) {
-      console.log(`Drag swap attempt: (${dragStart.r},${dragStart.c}) to (${r2},${c2})`);
+      console.log(`Drag Swap Attempt: (${dragStart.r},${dragStart.c}) -> (${r2},${c2})`);
       game.swapTiles(dragStart.r, dragStart.c, r2, c2);
     }
   }
@@ -255,6 +271,7 @@ const openWalletSelection = () => {
       try {
         const currentAccount = getWalletAccount();
         if (currentAccount.isConnected && currentAccount.connector?.id === connector.id) {
+          console.log('Already connected to this connector.');
           walletModal.classList.add('hidden');
           checkAutoStart();
           return;
@@ -296,18 +313,22 @@ startBtn.addEventListener('click', () => {
 usernameInput.addEventListener('input', checkAutoStart);
 
 dailyCheckinBtn.addEventListener('click', async () => {
+  console.log('Daily Check-in Clicked');
   try {
     showToast('Processing Check-in...', 'info', 0);
     const hash = await dailyCheckIn();
+    console.log('Check-in transaction sent:', hash);
     showToast('Confirming on Base...', 'info', 0);
     await waitForTransaction(hash);
     showToast('Check-in Successful!', 'success');
   } catch (err) {
+    console.error('Check-in Clicked - Error:', err);
     showToast(`Check-in failed: ${err.message}`, 'error', 6000);
   }
 });
 
 submitScoreBtn.addEventListener('click', async () => {
+  console.log('Submit Score Clicked');
   try {
     showToast('Submitting Score...', 'info', 0);
     const hash = await submitScore(game.score);
@@ -343,6 +364,7 @@ gameGrid.addEventListener('touchstart', (e) => {
       x: e.touches[0].clientX,
       y: e.touches[0].clientY
     };
+    console.log(`Touch started at: (${touchStart.r},${touchStart.c})`);
   }
 }, { passive: true });
 
@@ -359,7 +381,10 @@ gameGrid.addEventListener('touchend', (e) => {
     if (Math.abs(dy) > threshold) r2 = dy > 0 ? touchStart.r + 1 : touchStart.r - 1;
   }
   if (r2 !== touchStart.r || c2 !== touchStart.c) {
-    if (r2 >= 0 && r2 < 8 && c2 >= 0 && c2 < 8) game.swapTiles(touchStart.r, touchStart.c, r2, c2);
+    if (r2 >= 0 && r2 < 8 && c2 >= 0 && c2 < 8) {
+      console.log(`Touch Swap Attempt: (${touchStart.r},${touchStart.c}) -> (${r2},${c2})`);
+      game.swapTiles(touchStart.r, touchStart.c, r2, c2);
+    }
   }
   touchStart = null;
 }, { passive: true });

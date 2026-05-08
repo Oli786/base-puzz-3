@@ -19,6 +19,7 @@ export class GameEngine {
   }
 
   initLevel(levelNum) {
+    console.log(`Initializing Level ${levelNum}...`);
     this.currentLevel = LEVELS.find(l => l.level === levelNum);
     this.score = 0;
     this.moves = this.currentLevel.moves;
@@ -145,8 +146,10 @@ export class GameEngine {
 
   async processMatches() {
     let matches = this.findMatches();
+    console.log(`Initial findMatches found ${matches.length} matches.`);
     while (matches.length > 0) {
       // 1. Clear matches
+      console.log(`Processing ${matches.length} matches...`);
       this.score += matches.length * 10;
       matches.forEach(({ r, c }) => {
         this.grid[r][c].clearing = true;
