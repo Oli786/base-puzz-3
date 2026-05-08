@@ -1,0 +1,19 @@
+{
+  "name": "base-game",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^8.0.10"
+  },
+  "dependencies": {
+    "@tanstack/query-core": "^5.100.9",
+    "viem": "^2.48.11",
+    "wagmi": "^3.6.10"
+  }
+}

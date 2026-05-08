@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Base Match-3 Puzzle</title>
+    <meta name="description" content="A fun Match-3 game integrated with Base L2 blockchain." />
+    <link rel="stylesheet" href="./src/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="app">
+      <!-- Onboarding Screen -->
+      <section id="onboarding" class="screen active">
+        <div class="glass-card">
+          <h1>Base Match-3</h1>
+          <p class="subtitle">Connect your wallet to start playing on Base L2</p>
+          
+          <div class="input-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" placeholder="Enter your username" />
+          </div>
+
+          <div id="wallet-section">
+            <button id="connect-wallet" class="btn primary">Connect Wallet</button>
+          </div>
+
+          <div id="network-warning" class="warning-box hidden">
+            <p>You are currently on <span id="current-network">Mainnet</span>. Please switch to Base network to continue.</p>
+            <button id="switch-to-base" class="btn secondary">Switch to Base</button>
+          </div>
+
+          <button id="start-game" class="btn primary hidden">Start Game</button>
+        </div>
+      </section>
+
+      <!-- Main Game Screen -->
+      <section id="game-screen" class="screen hidden">
+        <header class="game-header">
+          <div class="player-info">
+            <span id="display-username">Player</span>
+            <button id="daily-checkin" class="btn small">Daily Check-in</button>
+          </div>
+          <div class="stats">
+            <div class="stat-item">
+              <span class="label">Level</span>
+              <span id="level-val">1</span>
+            </div>
+            <div class="stat-item">
+              <span class="label">Moves</span>
+              <span id="moves-val">20</span>
+            </div>
+            <div class="stat-item">
+              <span class="label">Score</span>
+              <span id="score-val">0</span>
+            </div>
+          </div>
+        </header>
+
+        <main class="game-container">
+          <div id="game-grid" class="grid-8x8"></div>
+        </main>
+
+        <footer class="game-footer">
+          <div class="target-info">
+            Target: <span id="target-val">500</span>
+          </div>
+        </footer>
+      </section>
+
+      <!-- Level Success/Fail Overlay -->
+      <div id="overlay" class="overlay hidden">
+        <div class="glass-card modal">
+          <h2 id="overlay-title">Level Complete!</h2>
+          <p id="overlay-msg">Great job! You reached the target.</p>
+          <div class="modal-actions">
+            <button id="submit-score" class="btn secondary">Submit Score to Base</button>
+            <button id="next-level" class="btn primary">Next Level</button>
+            <button id="retry-level" class="btn primary hidden">Retry</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transaction Status Toast -->
+      <div id="toast" class="toast hidden">
+        <div class="toast-content">
+          <span id="toast-icon">⏳</span>
+          <span id="toast-msg">Transaction pending...</span>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
